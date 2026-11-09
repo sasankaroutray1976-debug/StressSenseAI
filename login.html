@@ -1,0 +1,245 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login | StressSense AI</title>
+<style>
+  body{margin:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;display:flex;min-height:100vh}
+  .sidebar{width:260px;background:#2a2147;color:#fff;padding:24px;box-sizing:border-box;flex-shrink:0}
+  .sidebar a{color:#fff;text-decoration:none}
+  .main-content{flex-grow:1;background:#edf2f9;padding:40px;box-sizing:border-box}
+  .card{background:#fff;border-radius:12px;padding:28px;box-shadow:0 4px 6px rgba(0,0,0,.05);border:1px solid #e2e8f0;max-width:560px;margin:24px auto 0}
+  label{display:block;font-weight:600;font-size:14px;color:#2a2147;margin:16px 0 6px}
+  .hint{font-weight:400;color:#6b6485;font-size:12px}
+  input,select{width:100%;padding:11px 12px;font-size:15px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box;background:#fff;font-family:inherit;color:#2a2147}
+  input:focus,select:focus{outline:none;border-color:#6d4aff;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .err{color:#e11d48;font-size:12px;min-height:16px;margin-top:4px}
+  input.bad,select.bad{border-color:#e11d48}
+  #submitBtn{background:#6d4aff;color:#fff;border:none;padding:14px 40px;font-size:18px;font-weight:bold;border-radius:30px;cursor:pointer;box-shadow:0 4px 10px rgba(37,99,235,.2);margin-top:20px}
+  #submitBtn:hover{background:#5b3de0}
+  #msg{text-align:center;margin-top:14px;font-size:14px;font-weight:600}
+  .disclaimer{font-size:12px;color:#6b6485;margin-top:12px;text-align:center}
+  @media(max-width:800px){body{flex-direction:column}.sidebar{width:100%}.row{grid-template-columns:1fr}.main-content{padding:24px}}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="theme">
+:root{--ink:#2a2147;--muted:#6b6485;--violet:#6d4aff;--plum:#3b2a6b;--coral:#ff6b8a;--teal:#14b8a6;--sun:#ffb84d;--sky:#38bdf8;--line:#e8e2f8}
+body{font-family:'Nunito','Segoe UI',Tahoma,sans-serif;color:var(--ink)}
+h1{font-weight:800;font-size:38px;margin:0 0 4px;letter-spacing:-.5px}
+h2{font-weight:600;font-size:17px;color:var(--muted);margin:0}
+h3{font-weight:800}
+a{color:var(--violet)}
+.sidebar{background:linear-gradient(175deg,#2a1f55 0%,#4a2f8f 58%,#8a3fa6 100%)}
+.sidebar h2{display:flex;align-items:center;gap:10px;color:#fff;font-size:21px;font-weight:800;margin:0 0 22px}
+.sidebar h2:before{content:"";width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,#ffb84d,#ff6b8a);box-shadow:0 4px 12px rgba(255,107,138,.45)}
+.sidebar p{margin:4px 0}
+.sidebar p a{display:block;padding:10px 14px;border-radius:12px;font-weight:600;transition:background .15s}
+.sidebar p a:hover{background:rgba(255,255,255,.14)}
+.sidebar p a.active{background:rgba(255,255,255,.2)}
+.sidebar #who{color:#d9ceff!important;padding:0 14px;margin-bottom:14px}
+.main-content{background:radial-gradient(900px 420px at 100% 0,#ffe3dc 0,transparent 60%),radial-gradient(800px 460px at 0 100%,#d6f5ee 0,transparent 60%),#f6f3ff}
+.card{border-radius:20px;border:1px solid var(--line);box-shadow:0 10px 30px rgba(74,47,143,.08)}
+.dashboard-grid .card:nth-child(1){border-top:5px solid var(--violet)}
+.dashboard-grid .card:nth-child(2){border-top:5px solid var(--teal)}
+#planBox{border-top:5px solid var(--coral)}
+#profileCard{border-top:5px solid var(--violet)}
+.stats .card:nth-child(1){border-top:5px solid var(--violet)}
+.stats .card:nth-child(2){border-top:5px solid var(--teal)}
+.stats .card:nth-child(3){border-top:5px solid var(--coral)}
+.stats .card:nth-child(4){border-top:5px solid var(--sun)}
+#greet{text-align:center;font-size:18px;font-weight:600;color:var(--muted)}
+.video-wrap{background:linear-gradient(135deg,#3b2a6b,#6d4aff);border-radius:16px}
+#cameraPlaceholder{color:#e6deff;font-weight:600}
+#progressBar,.gauge,.bar-row .track{background:#ece7fb}
+#progressFill{background:linear-gradient(90deg,#14b8a6,#6d4aff,#ff6b8a)}
+.bar-row .fill{background:linear-gradient(90deg,#38bdf8,#6d4aff)}
+.badge{box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.tip,.plan-note{background:#fff5e0;border-left:4px solid var(--sun);border-radius:12px}
+.plan-sec{border:none;border-radius:16px}
+.plan-sec:nth-child(4n+1){background:#e8f8f4}.plan-sec:nth-child(4n+2){background:#efeaff}
+.plan-sec:nth-child(4n+3){background:#ffeceb}.plan-sec:nth-child(4n){background:#e6f4fe}
+#scanBtn,#submitBtn,.btn{background:linear-gradient(135deg,#6d4aff,#a24bff 60%,#ff6b8a);box-shadow:0 8px 20px rgba(109,74,255,.3);transition:transform .15s,box-shadow .15s}
+#scanBtn:hover,#submitBtn:hover,.btn:hover{background:linear-gradient(135deg,#5b3de0,#9240ef 60%,#f55a7c);transform:translateY(-2px)}
+#scanBtn:disabled,#submitBtn:disabled{background:#c4b8f0;box-shadow:none;transform:none}
+.btn.ghost{background:#fff;color:#e11d48;border:1px solid #ffd0d9;box-shadow:none}
+.btn.ghost:hover{background:#fff1f3;transform:none}
+input,select{border:1.5px solid var(--line);border-radius:12px;background:#fcfbff}
+input:focus,select:focus{border-color:var(--violet)!important;box-shadow:0 0 0 4px rgba(109,74,255,.15)!important}
+label{color:var(--ink)}
+details{border:1px solid var(--line);border-radius:16px;box-shadow:0 2px 8px rgba(74,47,143,.05)}
+details[open]{background:#fbfaff}
+.profile-grid div{background:#f6f3ff;border-radius:14px;padding:10px 14px}
+:focus-visible{outline:3px solid rgba(109,74,255,.45);outline-offset:2px}
+.sidebar{position:sticky;top:0;align-self:flex-start;height:100vh;overflow-y:auto;background-attachment:local}
+@media(max-width:800px){.sidebar{position:static;height:auto;align-self:stretch}}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <h2>StressSense AI</h2>
+  <p><a href="stresssense_v2 (2),html.html">🏠 Home</a></p>
+  <p><a href="history.html">📈 History</a></p>
+  <p><a class="active" href="login.html" id="loginLink">🔑 Log in</a></p>
+  <p id="logoutItem" style="display:none"><a href="#" id="logoutLink">👋 Log out</a></p>
+</div>
+ 
+<div class="main-content">
+  <h1 style="text-align:center">Welcome 👋</h1>
+  <h2 style="text-align:center">Tell us a little about yourself</h2>
+ 
+  <div class="card">
+    <form id="loginForm" novalidate>
+      <label for="name">Name</label>
+      <input id="name" type="text" placeholder="Your name" autocomplete="name">
+      <div class="err" id="e-name"></div>
+ 
+      <label for="age">Age</label>
+      <select id="age"></select>
+      <div class="err" id="e-age"></div>
+ 
+      <label for="profession">Working profession</label>
+      <input id="profession" type="text" placeholder="e.g. Student, Software engineer">
+      <div class="err" id="e-profession"></div>
+ 
+      <div class="row">
+        <div>
+          <label for="workHours">Working hours <span class="hint">(per day)</span></label>
+          <input id="workHours" type="number" min="0" max="24" step="0.5" placeholder="e.g. 8">
+          <div class="err" id="e-workHours"></div>
+        </div>
+        <div>
+          <label for="screenTime">Screen time <span class="hint">(hours per day)</span></label>
+          <input id="screenTime" type="number" min="0" max="24" step="0.5" placeholder="e.g. 6">
+          <div class="err" id="e-screenTime"></div>
+        </div>
+      </div>
+ 
+      <div class="row">
+        <div>
+          <label for="bedtime">Usual bedtime</label>
+          <input id="bedtime" type="time">
+          <div class="err" id="e-bedtime"></div>
+        </div>
+        <div>
+          <label for="wakeup">Usual wake-up time</label>
+          <input id="wakeup" type="time">
+          <div class="err" id="e-wakeup"></div>
+        </div>
+      </div>
+ 
+      <div style="text-align:center"><button type="submit" id="submitBtn">Continue</button></div>
+      <div id="msg"></div>
+    </form>
+    <div class="disclaimer">Your details are saved only in this browser and are not sent anywhere.</div>
+  </div>
+</div>
+ 
+<script>
+(() => {
+  const NEXT_PAGE  = 'stresssense_v2 (2),html.html';   // page to open after login — change to your main page's file name
+  const STORAGE_KEY = 'stresssenseProfile';
+ 
+  const $ = id => document.getElementById(id);
+  const form = $('loginForm'), msg = $('msg');
+ 
+  // Age dropdown 13–30
+  const age = $('age');
+  age.innerHTML = '<option value="">Select age</option>';
+  for (let i = 13; i <= 30; i++) age.innerHTML += `<option value="${i}">${i}</option>`;
+ 
+  // Pre-fill if the user has logged in before
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (saved) {
+      for (const k of ['name','age','profession','workHours','screenTime','bedtime','wakeup'])
+        if (saved[k] !== undefined) $(k).value = saved[k];
+      msg.style.color = '#554d73';
+      msg.textContent = 'Welcome back, ' + saved.name + '! Update your details or submit to continue.';
+    }
+  } catch (e) {}
+ 
+  function setError(id, text) {
+    $('e-' + id).textContent = text;
+    $(id).classList.toggle('bad', !!text);
+    return !text;
+  }
+  const num = id => $(id).value === '' ? NaN : Number($(id).value);
+ 
+  function validate() {
+    let ok = true;
+    const name = $('name').value.trim(), prof = $('profession').value.trim();
+    ok &= setError('name', name.length < 2 ? 'Please enter your name.' : '');
+    ok &= setError('age', !$('age').value ? 'Please select your age.' : '');
+    ok &= setError('profession', prof.length < 2 ? 'Please enter your profession.' : '');
+    const wh = num('workHours'), st = num('screenTime');
+    ok &= setError('workHours', isNaN(wh) || wh < 0 || wh > 24 ? 'Enter hours between 0 and 24.' : '');
+    ok &= setError('screenTime', isNaN(st) || st < 0 || st > 24 ? 'Enter hours between 0 and 24.' : '');
+    ok &= setError('bedtime', !$('bedtime').value ? 'Please set your bedtime.' : '');
+    ok &= setError('wakeup', !$('wakeup').value ? 'Please set your wake-up time.' : '');
+    return !!ok;
+  }
+ 
+  // Sleep duration in hours, handles crossing midnight
+  function sleepHours(bed, wake) {
+    const [bh, bm] = bed.split(':').map(Number), [wh, wm] = wake.split(':').map(Number);
+    let mins = (wh * 60 + wm) - (bh * 60 + bm);
+    if (mins <= 0) mins += 24 * 60;
+    return Math.round(mins / 6) / 10;
+  }
+ 
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!validate()) {
+      msg.style.color = '#e11d48';
+      msg.textContent = 'Please fix the highlighted fields.';
+      return;
+    }
+    const profile = {
+      name: $('name').value.trim(),
+      age: Number($('age').value),
+      profession: $('profession').value.trim(),
+      workHours: num('workHours'),
+      screenTime: num('screenTime'),
+      bedtime: $('bedtime').value,
+      wakeup: $('wakeup').value,
+      sleepHours: sleepHours($('bedtime').value, $('wakeup').value),
+      loggedInAt: new Date().toISOString()
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    } catch (err) {
+      msg.style.color = '#e11d48';
+      msg.textContent = 'Could not save your details (browser storage is blocked).';
+      return;
+    }
+    msg.style.color = '#059669';
+    msg.textContent = '✓ Logged in as ' + profile.name + '. Redirecting…';
+    $('submitBtn').disabled = true;
+    setTimeout(() => { window.location.href = NEXT_PAGE; }, 1000);
+  });
+ 
+  // Clear an error as soon as the user edits the field
+  form.addEventListener('input', e => { if (e.target.id) setError(e.target.id, ''); });
+})();
+</script>
+<script>
+// Show LOGIN when logged out, LOGOUT when logged in
+(function () {
+  let loggedIn = false;
+  try { loggedIn = !!localStorage.getItem('stresssenseProfile'); } catch (e) {}
+  const login = document.getElementById('loginLink'), out = document.getElementById('logoutItem');
+  if (login) login.parentElement.style.display = loggedIn ? 'none' : '';
+  if (out) {
+    out.style.display = loggedIn ? '' : 'none';
+    document.getElementById('logoutLink').addEventListener('click', function (e) {
+      e.preventDefault();
+      if (!confirm('Log out? Your saved scan history will be kept.')) return;
+      try { localStorage.removeItem('stresssenseProfile'); } catch (err) {}
+      window.location.href = 'login.html';
+    });
+  }
+})();
+</script>
+</body>
+</html>

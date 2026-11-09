@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StressSense AI</title>
+<style>
+  body{margin:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;display:flex;min-height:100vh}
+  .sidebar{width:260px;background:#2a2147;color:#fff;padding:24px;box-sizing:border-box;flex-shrink:0}
+  .main-content{flex-grow:1;background:#edf2f9;padding:40px;box-sizing:border-box}
+  .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 4px 6px rgba(0,0,0,.05);border:1px solid #e2e8f0}
+  .video-wrap{position:relative;width:100%;aspect-ratio:4/3;background:#2a2147;border-radius:10px;overflow:hidden}
+  #video,#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  #cameraPlaceholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;text-align:center;padding:16px}
+  #progressBar{height:6px;background:#e2e8f0;border-radius:3px;margin-top:12px;overflow:hidden}
+  #progressFill{height:100%;width:0;background:#6d4aff;transition:width .2s}
+  #status{margin:10px 0 0;font-size:14px;color:#554d73}
+  .score{font-size:56px;font-weight:700;margin:4px 0}
+  .gauge{height:14px;background:#e2e8f0;border-radius:7px;overflow:hidden;margin:8px 0 12px}
+  .gauge-fill{height:100%;width:0;border-radius:7px;transition:width .8s ease}
+  .badge{display:inline-block;padding:4px 14px;border-radius:20px;font-weight:600;font-size:14px;color:#fff}
+  .bar-row{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0}
+  .bar-row span:first-child{width:130px}
+  .bar-row .track{flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+  .bar-row .fill{height:100%;background:#6b6485}
+  .tip{background:#f1f5f9;border-radius:8px;padding:10px 12px;font-size:14px;margin-top:12px}
+  .disclaimer{font-size:12px;color:#6b6485;margin-top:12px}
+  #scanBtn{background:#6d4aff;color:#fff;border:none;padding:14px 40px;font-size:18px;font-weight:bold;border-radius:30px;cursor:pointer;box-shadow:0 4px 10px rgba(37,99,235,.2)}
+  #scanBtn:disabled{background:#93a9d9;cursor:not-allowed}
+  @media(max-width:800px){body{flex-direction:column}.sidebar{width:100%}.dashboard-grid{grid-template-columns:1fr}}
+  .sidebar a{color:#fff;text-decoration:none}
+  #planBox{margin-top:24px}
+  .plan-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:16px}
+  .plan-sec{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px}
+  .plan-sec h4{margin:0 0 6px;font-size:15px}
+  .plan-sec ul{margin:0;padding-left:18px;font-size:14px;color:#334155;line-height:1.5}
+  .plan-note{background:#f1f5f9;border-radius:8px;padding:10px 12px;font-size:14px;margin-top:16px}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="theme">
+:root{--ink:#2a2147;--muted:#6b6485;--violet:#6d4aff;--plum:#3b2a6b;--coral:#ff6b8a;--teal:#14b8a6;--sun:#ffb84d;--sky:#38bdf8;--line:#e8e2f8}
+body{font-family:'Nunito','Segoe UI',Tahoma,sans-serif;color:var(--ink)}
+h1{font-weight:800;font-size:38px;margin:0 0 4px;letter-spacing:-.5px}
+h2{font-weight:600;font-size:17px;color:var(--muted);margin:0}
+h3{font-weight:800}
+a{color:var(--violet)}
+.sidebar{background:linear-gradient(175deg,#2a1f55 0%,#4a2f8f 58%,#8a3fa6 100%)}
+.sidebar h2{display:flex;align-items:center;gap:10px;color:#fff;font-size:21px;font-weight:800;margin:0 0 22px}
+.sidebar h2:before{content:"";width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,#ffb84d,#ff6b8a);box-shadow:0 4px 12px rgba(255,107,138,.45)}
+.sidebar p{margin:4px 0}
+.sidebar p a{display:block;padding:10px 14px;border-radius:12px;font-weight:600;transition:background .15s}
+.sidebar p a:hover{background:rgba(255,255,255,.14)}
+.sidebar p a.active{background:rgba(255,255,255,.2)}
+.sidebar #who{color:#d9ceff!important;padding:0 14px;margin-bottom:14px}
+.main-content{background:radial-gradient(900px 420px at 100% 0,#ffe3dc 0,transparent 60%),radial-gradient(800px 460px at 0 100%,#d6f5ee 0,transparent 60%),#f6f3ff}
+.card{border-radius:20px;border:1px solid var(--line);box-shadow:0 10px 30px rgba(74,47,143,.08)}
+.dashboard-grid .card:nth-child(1){border-top:5px solid var(--violet)}
+.dashboard-grid .card:nth-child(2){border-top:5px solid var(--teal)}
+#planBox{border-top:5px solid var(--coral)}
+#profileCard{border-top:5px solid var(--violet)}
+.stats .card:nth-child(1){border-top:5px solid var(--violet)}
+.stats .card:nth-child(2){border-top:5px solid var(--teal)}
+.stats .card:nth-child(3){border-top:5px solid var(--coral)}
+.stats .card:nth-child(4){border-top:5px solid var(--sun)}
+#greet{text-align:center;font-size:18px;font-weight:600;color:var(--muted)}
+.video-wrap{background:linear-gradient(135deg,#3b2a6b,#6d4aff);border-radius:16px}
+#cameraPlaceholder{color:#e6deff;font-weight:600}
+#progressBar,.gauge,.bar-row .track{background:#ece7fb}
+#progressFill{background:linear-gradient(90deg,#14b8a6,#6d4aff,#ff6b8a)}
+.bar-row .fill{background:linear-gradient(90deg,#38bdf8,#6d4aff)}
+.badge{box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.tip,.plan-note{background:#fff5e0;border-left:4px solid var(--sun);border-radius:12px}
+.plan-sec{border:none;border-radius:16px}
+.plan-sec:nth-child(4n+1){background:#e8f8f4}.plan-sec:nth-child(4n+2){background:#efeaff}
+.plan-sec:nth-child(4n+3){background:#ffeceb}.plan-sec:nth-child(4n){background:#e6f4fe}
+#scanBtn,#submitBtn,.btn{background:linear-gradient(135deg,#6d4aff,#a24bff 60%,#ff6b8a);box-shadow:0 8px 20px rgba(109,74,255,.3);transition:transform .15s,box-shadow .15s}
+#scanBtn:hover,#submitBtn:hover,.btn:hover{background:linear-gradient(135deg,#5b3de0,#9240ef 60%,#f55a7c);transform:translateY(-2px)}
+#scanBtn:disabled,#submitBtn:disabled{background:#c4b8f0;box-shadow:none;transform:none}
+.btn.ghost{background:#fff;color:#e11d48;border:1px solid #ffd0d9;box-shadow:none}
+.btn.ghost:hover{background:#fff1f3;transform:none}
+input,select{border:1.5px solid var(--line);border-radius:12px;background:#fcfbff}
+input:focus,select:focus{border-color:var(--violet)!important;box-shadow:0 0 0 4px rgba(109,74,255,.15)!important}
+label{color:var(--ink)}
+details{border:1px solid var(--line);border-radius:16px;box-shadow:0 2px 8px rgba(74,47,143,.05)}
+details[open]{background:#fbfaff}
+.profile-grid div{background:#f6f3ff;border-radius:14px;padding:10px 14px}
+:focus-visible{outline:3px solid rgba(109,74,255,.45);outline-offset:2px}
+.sidebar{position:sticky;top:0;align-self:flex-start;height:100vh;overflow-y:auto;background-attachment:local}
+@media(max-width:800px){.sidebar{position:static;height:auto;align-self:stretch}}
+</style>
+</head>
+<body>
+<div class="sidebar">
+<h2>Stress Sense AI</h2>
+<p id="who" style="font-size:13px;color:#94a3b8"></p>
+<p><a class="active" href="stresssense_v2 (2),html.html">🏠 Home</a></p>
+<p><a href="history.html">📈 History</a></p>
+<p><a href="login.html" id="loginLink">🔑 Log in</a></p>
+<p id="logoutItem" style="display:none"><a href="#" id="logoutLink">👋 Log out</a></p>
+</div>
+
+<div class="main-content">
+  <h1 style="text-align:center">Stress Sense AI</h1>
+  <h2 style="text-align:center">Scan, understand and improve</h2>
+  <p id="greet">Let's check in on your well-being.</p>
+  <div class="dashboard-grid">
+    <div class="card">
+      <h3>Camera Preview</h3>
+      <div class="video-wrap">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+        <div id="cameraPlaceholder">Camera is off.<br>Click “Start Scan” to begin.</div>
+      </div>
+      <div id="progressBar"><div id="progressFill"></div></div>
+      <p id="status">Ready. Sit still, face the camera in good light and keep your face natural.</p>
+    </div>
+    <div class="card">
+      <h3>Analysis Result</h3>
+      <div id="resultBox"><p style="color:#6b6485">Your stress analysis will appear here after the scan.</p></div>
+    </div>
+  </div>
+  <div style="text-align:center;margin:30px 0 10px"><button id="scanBtn">📷 Start Scan</button></div>
+  <div class="card" id="planBox"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+(() => {
+  const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+  const SCAN_MS = 15000;   // longer scan so blink rate is meaningful
+
+  // How much each signal contributes (sums to 1). Tune these.
+  const WEIGHTS = { furrow:.21, browLow:.13, squint:.08, lips:.16, frown:.10, blink:.11, fidget:.06, emotion:.15 };
+  const LABELS  = { furrow:'Brow furrow', browLow:'Lowered brows', squint:'Eye tension', lips:'Pressed lips',
+                    frown:'Mouth corners down', blink:'Blink rate', fidget:'Head restlessness', emotion:'Negative emotion' };
+
+  const $ = id => document.getElementById(id);
+  const video=$('video'), overlay=$('overlay'), btn=$('scanBtn'), statusEl=$('status'),
+        fill=$('progressFill'), result=$('resultBox'), placeholder=$('cameraPlaceholder');
+  let modelsLoaded=false, stream=null;
+
+  const setStatus = t => statusEl.textContent = t;
+  const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const sd = a => { if(a.length<2) return 0; const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length); };
+  const median = a => { if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+
+  async function loadModels(){
+    if(modelsLoaded) return;
+    setStatus('Loading AI models…');
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+      faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+    ]);
+    modelsLoaded=true;
+  }
+  async function startCamera(){
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480},audio:false});
+    video.srcObject=stream;
+    await new Promise(r=>video.onloadedmetadata=r);
+    await video.play();
+    placeholder.style.display='none';
+    overlay.width=video.videoWidth; overlay.height=video.videoHeight;
+  }
+  const stopCamera = () => { if(stream) stream.getTracks().forEach(t=>t.stop()); stream=null; };
+
+  // Geometry measured from the 68 landmarks, all normalised by eye-to-eye width
+  // so it doesn't depend on how close you sit to the camera.
+  function measure(p){
+    const eye = dist(p[36],p[45]), mouthW = dist(p[48],p[54]);
+    const earL = (dist(p[37],p[41])+dist(p[38],p[40]))/(2*dist(p[36],p[39]));
+    const earR = (dist(p[43],p[47])+dist(p[44],p[46]))/(2*dist(p[42],p[45]));
+    return {
+      gap:   dist(p[21],p[22])/eye,                                   // distance between inner brows
+      brow:  (dist(p[19],p[37])+dist(p[24],p[44]))/2/eye,             // brow-to-eye distance
+      ear:   (earL+earR)/2,                                           // eye openness
+      lip:   dist(p[51],p[57])/mouthW,                                // lip thickness (thin = pressed)
+      dep:   ((p[48].y+p[54].y)/2-(p[62].y+p[66].y)/2)/mouthW,        // mouth corners vs centre (+ = down)
+      nose:  {x:p[30].x/eye, y:p[30].y/eye}                           // for head movement
+    };
+  }
+
+  // --- Blink detection from eye-region pixels (independent of landmark precision) ---
+  const eyeCanvas=document.createElement('canvas'); eyeCanvas.width=24; eyeCanvas.height=12;
+  const eyeCtx=eyeCanvas.getContext('2d',{willReadFrequently:true});
+  function eyeInfo(P,a,b,c){ let x=0,y=0,n=0; for(let i=a;i<=b;i++){x+=P[i].x;y+=P[i].y;n++;} return {x:x/n,y:y/n,w:dist(P[a],P[c])}; }
+  function eyeContrast(c){            // relative contrast (std/mean) of the eye crop: open eye = high, closed lid = low
+    const w=c.w*1.2, h=c.w*0.6;
+    eyeCtx.drawImage(video,c.x-w/2,c.y-h/2,w,h,0,0,24,12);
+    const d=eyeCtx.getImageData(0,0,24,12).data; let sum=0,sum2=0,n=0;
+    for(let i=0;i<d.length;i+=4){ const g=.299*d[i]+.587*d[i+1]+.114*d[i+2]; sum+=g; sum2+=g*g; n++; }
+    const m=sum/n; return Math.sqrt(Math.max(0,sum2/n-m*m))/(m+1);
+  }
+  function countBlinks(series){
+    if(series.length<20) return 0;
+    const vals=series.map(s=>s.v).sort((a,b)=>a-b);
+    const base=vals[Math.floor(vals.length*0.75)];          // typical open-eye contrast
+    let blinks=0, closedAt=null, last=-1e9;
+    for(const s of series){
+      if(closedAt===null && s.v<base*0.75) closedAt=s.t;     // eye closing
+      else if(closedAt!==null && s.v>base*0.88){             // eye reopened
+        if(s.t-closedAt<700 && s.t-last>200){ blinks++; last=s.t; }
+        closedAt=null;
+      }
+    }
+    return blinks;
+  }
+
+  async function runScan(){
+    const opts = new faceapi.TinyFaceDetectorOptions({inputSize:160,scoreThreshold:0.5});
+    const ctx = overlay.getContext('2d');
+    const F = {gap:[],brow:[],ear:[],lip:[],dep:[],neg:[],nx:[],ny:[]}, speeds=[];
+    let samples=0, attempts=0, lastHappy=0;
+    const blinkSeries=[]; let eyes=null, sampling=true;
+    (function sample(){                     // fast sampler (~display rate), separate from the slower face detection
+      if(!sampling) return;
+      if(eyes){ try{ blinkSeries.push({t:performance.now(), v:(eyeContrast(eyes.L)+eyeContrast(eyes.R))/2}); }catch(e){} }
+      requestAnimationFrame(sample);
+    })();
+    const t0=performance.now();
+
+    while(performance.now()-t0 < SCAN_MS){
+      attempts++;
+      const task = faceapi.detectSingleFace(video,opts).withFaceLandmarks(true);
+      // emotions only every 5th frame: keeps the loop fast enough to catch blinks
+      const det = await (attempts%5===1 ? task.withFaceExpressions() : task);
+      ctx.clearRect(0,0,overlay.width,overlay.height);
+      const now=performance.now();
+
+      if(det){
+        const m = measure(det.landmarks.positions), e = det.expressions, b = det.detection.box;
+        const P = det.landmarks.positions; eyes = { L:eyeInfo(P,36,41,39), R:eyeInfo(P,42,47,45) };
+        ctx.strokeStyle='#2dd4bf'; ctx.lineWidth=3; ctx.strokeRect(b.x,b.y,b.width,b.height);
+
+        F.gap.push(m.gap); F.brow.push(m.brow); F.ear.push(m.ear);
+        if(e) lastHappy=e.happy;
+        if(lastHappy<0.4){ F.lip.push(m.lip); F.dep.push(m.dep); }       // ignore smiling frames for mouth shape
+        if(e) F.neg.push(e.fearful+e.angry+e.sad+e.disgusted);
+
+        F.nx.push(m.nose.x); F.ny.push(m.nose.y);
+        
+        samples++;
+        setStatus('Analysing… blinks so far: '+countBlinks(blinkSeries)+'. Keep your face relaxed and natural.');
+      } else { eyes=null; setStatus('No face detected — face the camera in good lighting.'); }
+
+      fill.style.width=Math.min(100,(now-t0)/SCAN_MS*100)+'%';
+      await new Promise(r=>requestAnimationFrame(r));
+    }
+    ctx.clearRect(0,0,overlay.width,overlay.height);
+    sampling=false;
+    return {F,speeds,samples,attempts,seconds:(performance.now()-t0)/1000,blinkSeries};
+  }
+
+  function score({F,speeds,seconds,blinkSeries}){
+    // Blink count: eye openness dropping below 75% of its typical value
+    const sortedEar=[...F.ear].sort((a,b)=>a-b);
+    const base=sortedEar[Math.floor(sortedEar.length*0.75)]||0;   // typical open-eye value
+    const closeThr=base*0.80, openThr=base*0.90;
+    const blinks=countBlinks(blinkSeries);
+    
+    const blinkRate = blinks/(seconds/60);
+    const openEar = median(F.ear.filter(v=>v>=closeThr));
+
+    const s = {
+      furrow:  clamp01((0.34-median(F.gap))/0.10),
+      browLow: clamp01((0.30-median(F.brow))/0.10),
+      squint:  clamp01((0.26-openEar)/0.08),
+      lips:    clamp01((0.30-median(F.lip))/0.10),
+      frown:   clamp01((median(F.dep)+0.02)/0.07),
+      blink:   clamp01((blinkRate-18)/14),
+      fidget:  clamp01((Math.hypot(sd(F.nx),sd(F.ny))-0.06)/0.30),
+      emotion: clamp01(median(F.neg)*1.5)
+    };
+    let raw=0; for(const k in WEIGHTS) raw+=s[k]*WEIGHTS[k];
+    return {s, pct:Math.min(100,Math.round(raw*180)), blinkRate:Math.round(blinkRate), blinks};
+  }
+
+  function level(p){
+    if(p<25) return {label:'Low',color:'#059669',tip:'Your face looks relaxed. Keep up your routine and stay hydrated.'};
+    if(p<50) return {label:'Mild',color:'#d97706',tip:'Slight tension detected. Try a few slow, deep breaths or a short stretch break.'};
+    if(p<75) return {label:'Moderate',color:'#ea580c',tip:'Noticeable stress signals. Take a 5-minute break and try box breathing (4-4-4-4).'};
+    return {label:'High',color:'#e11d48',tip:'Strong stress signals. Pause, breathe slowly, and talk to someone you trust or a professional if this persists.'};
+  }
+
+  function show(r,samples,attempts){
+    const L=level(r.pct);
+    const conf = samples<60||samples/attempts<0.7 ? 'Low' : samples<150 ? 'Medium' : 'High';
+    const rows=Object.keys(r.s).sort((a,b)=>r.s[b]*WEIGHTS[b]-r.s[a]*WEIGHTS[a]).map(k=>
+      `<div class="bar-row"><span>${LABELS[k]}${k==='blink'?` (${r.blinks} blinks · ${r.blinkRate}/min)`:''}</span><div class="track"><div class="fill" style="width:${Math.round(r.s[k]*100)}%"></div></div><span style="width:36px;text-align:right">${Math.round(r.s[k]*100)}%</span></div>`).join('');
+    result.innerHTML=`
+      <div style="color:#6b6485;font-size:14px">Stress level</div>
+      <div class="score" style="color:${L.color}">${r.pct}%</div>
+      <span class="badge" style="background:${L.color}">${L.label}</span>
+      <span style="font-size:13px;color:#6b6485;margin-left:8px">Confidence: ${conf}</span>
+      <div class="gauge"><div class="gauge-fill" id="gf" style="background:${L.color}"></div></div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:4px">Signals detected</div>${rows}
+      <div class="tip">💡 ${L.tip}</div>
+      <div class="disclaimer">Based on ${samples} frames over ${SCAN_MS/1000}s. A heuristic estimate for self-awareness only, not a medical diagnosis.</div>`;
+    requestAnimationFrame(()=>$('gf').style.width=r.pct+'%');
+  }
+
+  // ---- Save each scan (with the login profile at that time) to history ----
+  const PROFILE_KEY='stresssenseProfile', HISTORY_KEY='stresssenseHistory';
+  const readJSON=(k,d)=>{ try{ return JSON.parse(localStorage.getItem(k))||d; }catch(e){ return d; } };
+  const profile=readJSON(PROFILE_KEY,null);
+  if(profile){
+    $('greet').textContent='Hi '+profile.name+', let\'s check in on your well-being.';
+    $('who').textContent='Logged in as '+profile.name;
+  } else {
+    $('greet').innerHTML='Let\'s check in on your well-being. <a href="login.html">Log in</a> so your scans are saved with your details.';
+  }
+  function saveScan(r,samples,attempts){
+    const conf = samples<60||samples/attempts<0.7 ? 'Low' : samples<150 ? 'Medium' : 'High';
+    const hist=readJSON(HISTORY_KEY,[]);
+    hist.push({ id:Date.now(), time:new Date().toISOString(), pct:r.pct, level:level(r.pct).label, confidence:conf,
+                signals:r.s, blinks:r.blinks, blinkRate:r.blinkRate, samples, profile:readJSON(PROFILE_KEY,null) });
+    try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(-200))); }catch(e){ setStatus('Scan complete, but it could not be saved to history.'); return false; }
+    return true;
+  }
+
+  // ---- Detailed action plan (logged-in users only) ----
+  const planBox=$('planBox');
+  const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const PLANS={
+    Low:{intro:"Your face looks relaxed. The goal now is to protect that balance.",
+      sections:[
+        ["Right now",["Take 3 slow breaths and notice what is helping you feel calm.","Drink a glass of water."]],
+        ["Today",["Keep regular meals and take short breaks from work or study.","Spend 15–20 minutes outdoors or moving around.","Stay connected with a friend or family member."]],
+        ["This week",["Keep a steady sleep and wake time.","Scan again at a similar time of day so you can see your own pattern in History.","Plan something you enjoy so there is something to look forward to."]]],
+      support:"No action needed beyond healthy routines. If you still feel overwhelmed despite a low reading, trust how you feel and talk to someone. A scan is only an estimate."},
+    Mild:{intro:"There is some tension in your face. This is a good moment to reset before it builds up.",
+      sections:[
+        ["Right now",["Breathe in for 4 seconds and out for 6, repeat 6 times.","Drop your shoulders, unclench your jaw and relax your forehead.","Stand up and stretch your neck, shoulders and back for 2 minutes."]],
+        ["Today",["Take a 10-minute break away from screens.","Write down what is on your mind and pick one small task to do next.","Avoid extra caffeine this afternoon and drink water instead."]],
+        ["This week",["Add a 20–30 minute walk or light exercise on most days.","Take a short break every 60–90 minutes while working.","Aim for a consistent bedtime."]]],
+      support:"If this tension lasts for more than a couple of weeks, mention it to a doctor, counsellor or someone you trust."},
+    Moderate:{intro:"Noticeable stress signals. Your body is asking for a proper pause, not just a quick fix.",
+      sections:[
+        ["Right now",["Stop what you are doing for 5 minutes and try box breathing: in 4, hold 4, out 4, hold 4, for 5 rounds.","Try the 5-4-3-2-1 grounding exercise: name 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste.","Loosen your jaw, unclench your hands and drop your shoulders."]],
+        ["Today",["Split your workload: choose the 1–3 most important tasks and postpone the rest.","Take a 15–20 minute walk, ideally outside and without your phone.","Limit caffeine and avoid screens for the last hour before bed.","Talk to a friend or family member about how your day is going."]],
+        ["This week",["Block out regular breaks and at least one proper rest period in your schedule.","Try a daily 10-minute relaxation habit: guided breathing, meditation or gentle yoga.","Look at what keeps raising your stress (workload, deadlines, sleep) and change one of those things.","Check your History page to see whether stress is rising over several days."]]],
+      support:"If you feel this way on most days, have trouble sleeping, or it affects your studies, work or relationships, speak to a counsellor or doctor."},
+    High:{intro:"Strong stress signals. Please slow down and take care of yourself first. Everything else can wait a little.",
+      sections:[
+        ["Right now",["Pause and step away from whatever is stressing you.","Breathe slowly: in for 4 seconds, out for 8, repeat for 2 minutes.","Sit or lie down somewhere quiet, drink some water, and let your shoulders and jaw go loose.","Message or call someone you trust and tell them you are having a hard time."]],
+        ["Today",["Cancel or postpone anything that is not essential.","Eat something light and avoid caffeine and energy drinks.","Do something gentle such as a slow walk, a warm shower or calming music.","Go to bed early and keep screens away for the last hour."]],
+        ["This week",["Book a conversation with a counsellor, doctor or mental-health professional.","Tell a teacher, manager or family member if workload is the cause, and ask for help or more time.","Keep a short daily note of your mood, sleep and triggers to share with a professional.","Scan again after resting and compare your results in History."]]],
+      support:"Please don't carry this alone. Talk to a trusted person, a counsellor or a doctor soon. If you feel unsafe or think about harming yourself, contact your local emergency number or a crisis helpline right away."}
+  };
+  const SIGNAL_TIPS={
+    furrow:"Your brow tension was high. Gently massage between your eyebrows and let your forehead go smooth.",
+    browLow:"Your brows were lowered. Raise them a few times, then relax them, and soften your gaze.",
+    squint:"Your eyes looked tense. Look at something far away for 20 seconds, then rest your closed eyes under your palms.",
+    lips:"Your lips were pressed together. Let your lips part slightly and unclench your jaw.",
+    frown:"The corners of your mouth were turned down. A gentle smile stretch followed by a long, slow exhale can help.",
+    blink:"Your blink rate was high, which often goes with eye strain or tension. Reduce screen glare and rest your eyes.",
+    fidget:"You showed head restlessness. A short walk or stretch break can release that energy.",
+    emotion:"Negative emotion was detected in your expression. Writing down what is on your mind or talking it over can help."
+  };
+  function personalTips(r){
+    const t=[], p=profile, teen=p.age<=18;
+    if(p.sleepHours<7) t.push(`You sleep about ${p.sleepHours} hours. Aim for ${teen?'8–10':'7–9'} hours by moving your bedtime earlier by 15 minutes every few days.`);
+    if(p.screenTime>=6) t.push(`With about ${p.screenTime} hours of screen time, use the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds.`);
+    if(p.workHours>=9) t.push(`You work around ${p.workHours} hours a day. Schedule a real break every 90 minutes and a clear end to your work day.`);
+    if(teen && r.pct>=50) t.push("Because you are young, consider telling a parent, teacher or school counsellor how you are feeling.");
+    if(!t.length) t.push("Your sleep, screen time and working hours look balanced. Keep your bedtime and breaks consistent.");
+    Object.keys(r.s).filter(k=>r.s[k]>=0.5).sort((a,b)=>r.s[b]*WEIGHTS[b]-r.s[a]*WEIGHTS[a]).slice(0,2).forEach(k=>t.push(SIGNAL_TIPS[k]));
+    return t;
+  }
+  function renderPlan(r){
+    if(!profile){
+      planBox.innerHTML='<h3 style="margin-top:0">🔒 Personalised action plan</h3><p style="color:#6b6485">A detailed plan for your stress level is available to logged-in users. <a href="login.html">Log in</a> to unlock it.</p>';
+      return;
+    }
+    if(!r){
+      planBox.innerHTML='<h3 style="margin-top:0">Your personalised action plan</h3><p style="color:#6b6485">Complete a scan and a detailed plan for your stress level will appear here.</p>';
+      return;
+    }
+    const L=level(r.pct), P=PLANS[L.label];
+    const list=a=>'<ul>'+a.map(i=>`<li>${i}</li>`).join('')+'</ul>';
+    planBox.innerHTML=`
+      <div class="plan-head"><h3 style="margin:0">Action plan for ${esc(profile.name)}</h3><span class="badge" style="background:${L.color}">${L.label} stress · ${r.pct}%</span></div>
+      <p style="color:#554d73;margin:10px 0 0">${P.intro}</p>
+      <div class="plan-grid">
+        ${P.sections.map(([h,a])=>`<div class="plan-sec"><h4>${h}</h4>${list(a)}</div>`).join('')}
+        <div class="plan-sec"><h4>For you</h4>${list(personalTips(r))}</div>
+      </div>
+      <div class="plan-note">🤝 <b>When to get support:</b> ${P.support}</div>
+      <div class="disclaimer">General wellbeing guidance based on a heuristic scan. It is not medical advice.</div>`;
+  }
+  renderPlan(null);
+
+  btn.addEventListener('click', async()=>{
+    btn.disabled=true; fill.style.width='0';
+    result.innerHTML='<p style="color:#6b6485">Scanning…</p>';
+    try{
+      if(!navigator.mediaDevices?.getUserMedia) throw new Error('Camera not supported. Use https:// or http://localhost.');
+      await loadModels(); setStatus('Starting camera…'); await startCamera();
+      const data=await runScan(); stopCamera();
+      if(data.samples<30){
+        result.innerHTML='<p style="color:#e11d48">Could not track your face long enough. Try again with better lighting, facing the camera.</p>';
+        setStatus('Scan incomplete.');
+      } else { const r=score(data); show(r,data.samples,data.attempts); renderPlan(r); setStatus(saveScan(r,data.samples,data.attempts)?'Scan complete and saved to History.':'Scan complete.'); }
+    }catch(err){
+      stopCamera(); placeholder.style.display='flex';
+      result.innerHTML=`<p style="color:#e11d48">${err.name==='NotAllowedError'?'Camera permission was denied. Please allow access and retry.':(err.message||'Something went wrong.')}</p>`;
+      setStatus('Error.');
+    }finally{ btn.disabled=false; btn.textContent='📷 Scan Again'; }
+  });
+})();
+</script>
+<script>
+// Show LOGIN when logged out, LOGOUT when logged in
+(function () {
+  let loggedIn = false;
+  try { loggedIn = !!localStorage.getItem('stresssenseProfile'); } catch (e) {}
+  const login = document.getElementById('loginLink'), out = document.getElementById('logoutItem');
+  if (login) login.parentElement.style.display = loggedIn ? 'none' : '';
+  if (out) {
+    out.style.display = loggedIn ? '' : 'none';
+    document.getElementById('logoutLink').addEventListener('click', function (e) {
+      e.preventDefault();
+      if (!confirm('Log out? Your saved scan history will be kept.')) return;
+      try { localStorage.removeItem('stresssenseProfile'); } catch (err) {}
+      window.location.href = 'login.html';
+    });
+  }
+})();
+</script>
+</body>
+</html>
